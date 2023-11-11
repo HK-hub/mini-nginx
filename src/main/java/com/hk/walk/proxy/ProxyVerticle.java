@@ -91,36 +91,22 @@ public class ProxyVerticle extends AbstractVerticle {
                     // 设置header
                     clientRequest.headers().addAll(request.headers());
 
-                    request.handler(clientRequest::write);
                     // 发送请求
-                    clientRequest.response(responseResult -> {
+                    clientRequest.send(request).onSuccess(clientResponse -> {
 
-                        if (responseResult.succeeded()) {
-                            // 异步发送回调
-                            HttpClientResponse clientResponse = responseResult.result();
-                            // 获取客户端响应结果
-                            response.setStatusCode(clientResponse.statusCode())
-                                    .setStatusMessage(clientResponse.statusMessage());
-                            // 响应体
-                            clientResponse.handler(response::write);
-                            // 结束客户端请求
-                            clientResponse.endHandler(end -> {
-                                response.end();
-                            });
+                        // 获取客户端响应结果
+                        response.setStatusCode(clientResponse.statusCode())
+                                .setStatusMessage(clientResponse.statusMessage());
+                        // 响应体
+                        clientResponse.handler(response::write);
+                        // 结束客户端请求
+                        response.send(clientResponse);
 
-                        } else {
-                            responseResult.cause().printStackTrace();
-                            response.setStatusCode(500)
-                                    .setStatusMessage(responseResult.cause().getMessage());
-                        }
-                    });
-
-                    request.resume();
-                    request.handler(clientRequest::write);
-
-                    // 结束发送
-                    request.endHandler(end -> {
-                        clientRequest.end();
+                    }).onFailure(error -> {
+                        // 请求异常
+                        error.printStackTrace();
+                        response.setStatusCode(500)
+                                .setStatusMessage(error.getMessage());
                     });
 
                 } else {

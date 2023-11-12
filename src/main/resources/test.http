@@ -1,8 +1,11 @@
 ### 8080
 GET http://localhost:8080/hello
 
+### 8080/a
+GET http://localhost:8080/a/hello
+
 ### 8080 Post
-POST http://localhost:8080/post
+POST http://localhost:8080/b/post
 Content-Type: application/json
 
 {
@@ -21,4 +24,20 @@ Content-Type: application/json
 {
   "id": 999,
   "value": "content"
+}
+
+
+### 9090/a
+GET http://localhost:9090/a/hello
+
+### 9090/b
+GET http://localhost:9090/b/hello
+
+### 9090 Post
+POST http://localhost:9090/b/post
+Content-Type: application/json
+
+{
+  "id": 999,
+  "value": "content /b/post"
 }

@@ -1,0 +1,27 @@
+{
+    // 监听端口
+    "port": 9090,
+    // 代理的上游
+    "upstreams" : [
+        {
+            // 代理的前缀
+            "path": "/a",
+            // 代理的服务地址, 可以进行负载均衡
+            "servers": [
+                "http://localhost:8080/", "http://localhost:8080/", "http://localhost:8080/"
+            ],
+            // 负载均衡策略: 轮询roll，随机random，一致性hash
+            "loadBalance": "roll"
+        },
+        {
+            // 代理的前缀, 支持正则表达式
+            "path": "/b",
+            // 代理的服务地址, 可以进行负载均衡
+            "servers": [
+                "http://localhost:8080/", "http://localhost:8080/", "http://localhost:8080/"
+            ],
+            // 负载均衡策略: 轮询roll，随机random，一致性hash
+            "loadBalance": "random"
+        }
+    ]
+}

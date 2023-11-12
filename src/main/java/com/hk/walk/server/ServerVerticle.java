@@ -7,6 +7,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,9 +21,8 @@ import org.slf4j.LoggerFactory;
  * @Modified :
  * @Version : 1.0
  */
+@Slf4j
 public class ServerVerticle extends AbstractVerticle {
-
-    private static final Logger logger = LoggerFactory.getLogger(ServerVerticle.class);
 
     public static int port = 8080;
 
@@ -49,7 +49,29 @@ public class ServerVerticle extends AbstractVerticle {
             response.end("hello vert.x");
         });
 
+        this.router.get("/a/hello").handler(context -> {
+
+            HttpServerResponse response = context.response();
+            response.end("hello vert.x by a");
+        });
+
+        this.router.get("/b/hello").handler(context -> {
+
+            HttpServerResponse response = context.response();
+            response.end("hello vert.x by b");
+        });
+
         this.router.post("/post")
+                .handler(BodyHandler.create())
+                .handler(context -> {
+                    JsonObject jsonObject = context.body().asJsonObject();
+                    HttpServerResponse response = context.response();
+                    response.end(jsonObject.toString());
+                });
+
+
+
+        this.router.post("/b/post")
                 .handler(BodyHandler.create())
                 .handler(context -> {
                     JsonObject jsonObject = context.body().asJsonObject();
@@ -64,11 +86,11 @@ public class ServerVerticle extends AbstractVerticle {
         // 启动服务
         server.requestHandler(router).listen(port, event -> {
             if (event.succeeded()) {
-                // log.info("mini nginx server start success on port:{}", port);
+                log.info("mini nginx server start success on port:{}", port);
             }
             // 启动失败
             if (event.failed()) {
-                // log.info("mini nginx server start fail on port:{}, cause:", port, event.cause());
+                log.info("mini nginx server start fail on port:{}, cause:", port, event.cause());
             }
         });
     }

@@ -1,16 +1,17 @@
 package com.hk.walk.proxy;
 
 import com.google.gson.Gson;
+import com.hk.walk.config.Frontend;
 import com.hk.walk.config.Upstream;
 import com.hk.walk.config.WalkConfig;
-import com.hk.walk.constant.WalkConstants;
 import com.hk.walk.wrapper.HttpClientWrapper;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
 import lombok.extern.slf4j.Slf4j;
-import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author : HK意境
@@ -27,6 +28,8 @@ public class ProxyVerticle extends AbstractVerticle {
 
     private HttpServer server;
 
+    private Router router;
+
     private WalkConfig walkConfig;
 
     /**
@@ -37,7 +40,7 @@ public class ProxyVerticle extends AbstractVerticle {
     /**
      * 客户端端口
      */
-    private int port = 80;
+    private int port;
 
 
     /**
@@ -50,18 +53,12 @@ public class ProxyVerticle extends AbstractVerticle {
         log.info("deploy proxyVerticle use config:{}", jsonConfig);
 
         // 解析成为对象
-        WalkConfig config = new Gson().fromJson(jsonConfig.toString(), WalkConfig.class);
+        this.walkConfig = new Gson().fromJson(jsonConfig.toString(), WalkConfig.class);
         // 设置配置客户端
-        config.initUpstream(this.vertx);
+        this.walkConfig.init(this.vertx, this.router);
 
-        // 设置端口
-        if (Objects.isNull(config.getPort())) {
-            config.setPort(WalkConstants.defaultPort);
-        }
-
-        log.info("parse config.json to object:{}", config);
-        this.port = config.getPort();
-        this.walkConfig = config;
+        log.info("parse config.json to object:{}", this.walkConfig);
+        this.port = this.walkConfig.getPort();
     }
 
     /**
@@ -72,10 +69,11 @@ public class ProxyVerticle extends AbstractVerticle {
     @Override
     public void start(Promise<Void> startPromise) throws Exception {
 
+        this.server = this.vertx.createHttpServer();
+        this.router = Router.router(this.vertx);
+
         // 初始化工作
         this.initConfig();
-
-        this.server = this.vertx.createHttpServer();
 
         // 反向代理转发所有的请求
         this.proxyHandler();
@@ -102,13 +100,24 @@ public class ProxyVerticle extends AbstractVerticle {
 
             // 获取响应对象
             HttpServerResponse response = request.response();
+            // 获取请求路径
+            String requestPath = request.path();
+
+            // 处理前端资源请求
+            for (Frontend frontend : this.walkConfig.getFrontends()) {
+                if (requestPath.startsWith(frontend.getPath())) {
+                    this.router.handle(request);
+                    return;
+                }
+            }
+
+            // TODO 解决/static 静态资源问题
+
+
             // 暂停流的读取
             request.pause();
             // 持续传输数据
             response.setChunked(true);
-
-            // 获取请求路径
-            String requestPath = request.path();
 
             //  根据请求路径获取到对应的upstream
             for (Upstream upstream : this.walkConfig.getUpstreams()) {
@@ -135,6 +144,18 @@ public class ProxyVerticle extends AbstractVerticle {
             response.setStatusCode(404).setStatusMessage("no page 404");
             response.end("not found page 404");
         });
+    }
+
+
+    /**
+     * 代理前端静态资源
+     * @param request
+     * @param requestPath
+     * @return
+     */
+    private boolean proxyFrontend(HttpServerRequest request, String requestPath) {
+
+        return false;
     }
 
 

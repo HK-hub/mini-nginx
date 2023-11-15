@@ -7,6 +7,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.StaticHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,13 @@ public class ServerVerticle extends AbstractVerticle {
         // 服务和路由
         HttpServer server = this.vertx.createHttpServer();
         this.router = Router.router(vertx);
+
+
+        // 静态资源
+        this.router.get("/index.html").handler(StaticHandler.create("")
+                .setCachingEnabled(true).setMaxAgeSeconds(65535));
+
+
 
         // 设置路由和处理器
         this.router.get("/hello").handler(context -> {

@@ -20,16 +20,13 @@ public class WalkLauncher extends Launcher {
 
     public static void main(String[] args) {
 
+        // 处理运行和配置文件
 
         // 启动代理实例
         new WalkLauncher().dispatch(args);
     }
 
 
-    @Override
-    public void dispatch(String[] args) {
-        super.dispatch(args);
-    }
 
     /**
      * 配置解析之后
@@ -37,6 +34,9 @@ public class WalkLauncher extends Launcher {
      */
     @Override
     public void afterConfigParsed(JsonObject config) {
+
+        // 解析配置文件
+
         super.afterConfigParsed(config);
     }
 

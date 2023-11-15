@@ -12,5 +12,19 @@ package com.hk.walk.constant;
  */
 public class WalkConstants {
 
+    /**
+     * 默认监听端口
+     */
     public static final int defaultPort = 80;
+
+    /**
+     * 默认日志文件大小
+     */
+    public static final int DEFAULT_LOG_SIZE = 1024;
+
+    /**
+     * 默认日志大小单位
+     */
+    public static final String DEFAULT_LOG_SIZE_UNIT = "KB";
+
 }

@@ -5,7 +5,6 @@ import com.hk.walk.config.Upstream;
 import com.hk.walk.config.WalkConfig;
 import com.hk.walk.constant.WalkConstants;
 import com.hk.walk.wrapper.HttpClientWrapper;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.*;

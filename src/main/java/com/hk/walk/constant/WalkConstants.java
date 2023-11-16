@@ -32,4 +32,15 @@ public class WalkConstants {
      */
     public static final String STATIC_RESOURCE_PATH = "/static";
 
+    /**
+     * websocket升级头
+     */
+    public static final String WEBSOCKET_UPGRADE_HEADER = "Upgrade";
+
+
+    /**
+     * websocket升级协议
+     */
+    public static final String WEBSOCKET_UPGRADE_PROTOCOL = "websocket";
+
 }

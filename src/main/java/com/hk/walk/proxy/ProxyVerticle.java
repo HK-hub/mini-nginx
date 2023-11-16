@@ -6,17 +6,14 @@ import com.hk.walk.config.Upstream;
 import com.hk.walk.config.WalkConfig;
 import com.hk.walk.constant.WalkConstants;
 import com.hk.walk.wrapper.HttpClientWrapper;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.handler.FileSystemAccess;
-import io.vertx.ext.web.handler.StaticHandler;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.List;
+import org.apache.commons.lang3.BooleanUtils;
 import java.util.Objects;
 
 /**
@@ -69,7 +66,9 @@ public class ProxyVerticle extends AbstractVerticle {
 
     /**
      * 启动代理服务器
+     *
      * @param startPromise
+     *
      * @throws Exception
      */
     @Override
@@ -98,6 +97,58 @@ public class ProxyVerticle extends AbstractVerticle {
 
 
     /**
+     * WebSocket处理
+     * @param client
+     * @param request
+     * @param uri
+     * @param response
+     * @return
+     */
+    private boolean webSocketHandle(HttpClient client, HttpServerRequest request, String uri, HttpServerResponse response) {
+
+        String upgrade = request.getHeader(WalkConstants.WEBSOCKET_UPGRADE_HEADER);
+        if (Objects.isNull(upgrade) || BooleanUtils.isFalse(WalkConstants.WEBSOCKET_UPGRADE_PROTOCOL.equalsIgnoreCase(upgrade))) {
+            // 非websocket 请求
+            return false;
+        }
+
+        // 升级成为WebSocket 协议
+        request.toWebSocket()
+                .onSuccess(serverWebSocket -> {
+                    // 结束握手
+                    serverWebSocket.accept();
+
+                    // 进行连接服务器WebSocket
+                    WebSocketConnectOptions options = new WebSocketConnectOptions();
+                    options.setURI(uri).setHeaders(request.headers());
+
+                    // 连接成功
+                    client.webSocket(options)
+                            .onSuccess(clientWebSocket -> {
+                                // server(浏览器)端携带的frame -> 写入代理端
+                                serverWebSocket.frameHandler(clientWebSocket::writeFrame);
+
+                                // 代理端产生frame -> 写入server端
+                                clientWebSocket.frameHandler(serverWebSocket::writeFrame);
+
+                                // server端关闭WebSocket 连接
+                                serverWebSocket.closeHandler(close -> clientWebSocket.close());
+
+                                // 客户端关闭WebSocket 连接
+                                clientWebSocket.closeHandler(close -> serverWebSocket.close());
+                            });
+                }).onFailure(error -> {
+                    // 升级失败
+                    log.info("request:{} upgrade to websocket failed:", request.uri(), error);
+                    errorResponse(response, request, error);
+                });
+
+        // 命中webSocket,此处异步执行
+        return true;
+    }
+
+
+    /**
      * 代理处理
      */
     private void proxyHandler() {
@@ -110,19 +161,10 @@ public class ProxyVerticle extends AbstractVerticle {
             String requestPath = request.path();
 
             // 处理前端资源请求
-            for (Frontend frontend : this.walkConfig.getFrontends()) {
-                if (requestPath.startsWith(frontend.getPath())) {
-                    this.router.handle(request);
-                    return;
-                }
-            }
-
-            // 解决/static/*请求
-            if (requestPath.startsWith(WalkConstants.STATIC_RESOURCE_PATH)) {
-                if (Objects.nonNull(this.walkConfig.getRoot())) {
-                    this.router.handle(request);
-                    return;
-                }
+            boolean proxyFronted = proxyFronted(request, requestPath);
+            if (BooleanUtils.isTrue(proxyFronted)) {
+                // 前端代理成功
+                return;
             }
 
             // 暂停流的读取
@@ -131,23 +173,10 @@ public class ProxyVerticle extends AbstractVerticle {
             response.setChunked(true);
 
             //  根据请求路径获取到对应的upstream
-            for (Upstream upstream : this.walkConfig.getUpstreams()) {
-                // 获取匹配路径的upstream
-                // TODO 后续支持正则表达式
-                String prefix = upstream.getPath();
-                if (requestPath.startsWith(prefix)) {
-                    // 请求路径以配置路径开头
-                    // 负载均衡选择
-                    HttpClientWrapper clientWrapper = upstream.loadBalanceSelect(request.localAddress().host());
-                    // 获取目标请求路径
-                    String serverUri = upstream.getServerUriList().get(clientWrapper.getIndex());
-                    String uri = request.uri().replace(prefix, serverUri);
-
-                    // 发送请求
-                    this.sendRequest(clientWrapper.getHttpClient(), request, uri, response);
-                    // 结束循环
-                    return;
-                }
+            boolean proxyUpstream = proxyUpstream(request, requestPath, response);
+            if (BooleanUtils.isTrue(proxyUpstream)) {
+                // 上游代理成功
+                return;
             }
 
             // 没有找到匹配的upstream
@@ -157,26 +186,78 @@ public class ProxyVerticle extends AbstractVerticle {
     }
 
 
+
     /**
-     * 代理前端静态资源
+     * 上游代理
+     * @param request
+     * @param requestPath
+     * @param response
+     * @return
+     */
+    private boolean proxyUpstream(HttpServerRequest request, String requestPath, HttpServerResponse response) {
+        for (Upstream upstream : this.walkConfig.getUpstreams()) {
+            // 获取匹配路径的upstream
+            // TODO 后续支持正则表达式
+            String prefix = upstream.getPath();
+            if (requestPath.startsWith(prefix)) {
+                // 请求路径以配置路径开头
+                // 负载均衡选择
+                HttpClientWrapper clientWrapper = upstream.loadBalanceSelect(request.localAddress().host());
+                // 获取目标请求路径
+                String serverUri = upstream.getServerUriList().get(clientWrapper.getIndex());
+                String uri = request.uri().replace(prefix, serverUri);
+
+                // 处理WebSocket 请求
+                boolean webSocketHandle = this.webSocketHandle(clientWrapper.getHttpClient(), request, uri, response);
+                if (BooleanUtils.isTrue(webSocketHandle)) {
+                    // ws 处理成功，结束链路
+                    return true;
+                }
+
+                // 发送请求
+                this.requestHandle(clientWrapper.getHttpClient(), request, uri, response);
+                // 结束循环
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * 前端静态页面，资源代理
      * @param request
      * @param requestPath
      * @return
      */
-    private boolean proxyFrontend(HttpServerRequest request, String requestPath) {
+    private boolean proxyFronted(HttpServerRequest request, String requestPath) {
+        for (Frontend frontend : this.walkConfig.getFrontends()) {
+            if (requestPath.startsWith(frontend.getPath())) {
+                this.router.handle(request);
+                return true;
+            }
+        }
 
+        // 解决/static/*请求
+        if (requestPath.startsWith(WalkConstants.STATIC_RESOURCE_PATH)) {
+            if (Objects.nonNull(this.walkConfig.getRoot())) {
+                this.router.handle(request);
+                return true;
+            }
+        }
         return false;
     }
 
 
     /**
      * 代理发送请求
+     *
      * @param client
      * @param request
-     * @param uri 请求uri, 如果有请求参数会进行携带
+     * @param uri      请求uri, 如果有请求参数会进行携带
      * @param response
      */
-    private void sendRequest(HttpClient client, HttpServerRequest request, String uri, HttpServerResponse response) {
+    private void requestHandle(HttpClient client, HttpServerRequest request, String uri, HttpServerResponse response) {
 
         client.request(request.method(), uri, result -> {
             // 异步封装的请求结果
@@ -204,16 +285,30 @@ public class ProxyVerticle extends AbstractVerticle {
                 }).onFailure(error -> {
                     // 请求异常
                     log.info("proxy client request failure:", error);
-                    response.setStatusCode(500)
-                            .setStatusMessage(error.getMessage());
+                    errorResponse(response, request, error);
                 });
 
             } else {
                 log.info("proxy client request failure:", result.cause());
-                response.setStatusCode(500)
-                        .setStatusMessage(result.cause().getMessage());
+                errorResponse(response, request, result.cause());
             }
         });
+    }
+
+
+    /**
+     * 错误处理
+     *
+     * @param response
+     * @param error
+     */
+    private void errorResponse(HttpServerResponse response, HttpServerRequest request, Throwable error) {
+
+        // 携带header
+        response.headers().addAll(request.headers());
+        // 错误信息
+        response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).setStatusMessage(error.getMessage())
+                .end(error.getMessage());
     }
 
 

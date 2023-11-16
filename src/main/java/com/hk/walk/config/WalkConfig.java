@@ -1,15 +1,17 @@
 package com.hk.walk.config;
 
-import ch.qos.logback.core.pattern.FormatInfo;
 import com.hk.walk.config.cache.Cache;
+import com.hk.walk.config.cache.CacheControl;
 import com.hk.walk.config.error.ErrorItem;
 import com.hk.walk.constant.WalkConstants;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.FileSystemAccess;
 import io.vertx.ext.web.handler.StaticHandler;
 import lombok.Data;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -43,6 +45,11 @@ public class WalkConfig {
      * 前端静态资源
      */
     private List<Frontend> frontends;
+
+    /**
+     * 根路径/对应的前端资源, 会成为默认的首页，静态资源加载目录
+     */
+    private String root;
 
 
     /**
@@ -126,6 +133,43 @@ public class WalkConfig {
             this.frontends = new ArrayList<>();
         }
 
+        // 遍历获取前端资源路径
+        for (Frontend frontend : this.frontends) {
+
+            // 静态资源处理器
+            StaticHandler staticHandler = StaticHandler.create(FileSystemAccess.ROOT, frontend.getDir());
+
+            // 缓存配置
+            Cache cache = frontend.getCache();
+            if (Objects.nonNull(cache) && BooleanUtils.isTrue(cache.getEnable())) {
+                staticHandler.setCachingEnabled(cache.getEnable());
+                // 缓存时间
+                if (Objects.nonNull(cache.getMaxAge())) {
+                    staticHandler.setMaxAgeSeconds(cache.getMaxAge());
+                }
+            }
+
+            // 设置路由
+            router.route(frontend.getPath())
+                    .handler(routerContext -> {
+                        // 禁用缓存
+                        if (Objects.nonNull(cache) && BooleanUtils.isFalse(cache.getEnable())) {
+                            MultiMap headers = routerContext.response().headers();
+                            headers.add("Cache-Control", CacheControl.NO_CACHE)
+                                    .add("Cache-Control", CacheControl.NO_STORE);
+                        }
+
+                        routerContext.next();
+                    })
+                    // 允许读取文件系统文件,资源文件绝对地址
+                    .handler(staticHandler);
+        }
+
+        // /static静态资源
+        router.route("/static/*")
+                .handler(StaticHandler.create(FileSystemAccess.ROOT, this.root + "/static"));
+
+
         // 如果此时前端没有读取到数据
         router.errorHandler(404, context -> {
             String path = context.request().path();
@@ -142,28 +186,6 @@ public class WalkConfig {
             context.response().setStatusCode(404).end("not found");
         });
 
-
-        // 遍历获取前端资源路径
-        for (Frontend frontend : this.frontends) {
-
-            // 静态资源处理器
-            StaticHandler staticHandler = StaticHandler.create(FileSystemAccess.ROOT, frontend.getDir());
-
-            // 缓存配置
-            Cache cache = frontend.getCache();
-            if (Objects.nonNull(cache) && Boolean.TRUE.equals(cache.getEnable())) {
-                staticHandler.setCachingEnabled(cache.getEnable());
-                // 缓存时间
-                if (Objects.nonNull(cache.getMaxAge())) {
-                    staticHandler.setMaxAgeSeconds(cache.getMaxAge());
-                }
-            }
-
-            // 设置路由
-            router.route(frontend.getPath())
-                    // 允许读取文件系统文件,资源文件绝对地址
-                    .handler(staticHandler);
-        }
     }
 
 }

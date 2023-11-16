@@ -76,7 +76,7 @@ class ProxyVerticleTest {
     public void testProxyServer(Vertx vertx, VertxTestContext testContext) {
 
         WebClient client = WebClient.create(vertx);
-        client.get(9090, "127.0.0.1", "/a/hello")
+        client.get(9090, "127.0.0.1", "/api/hello")
                 .send()
                 .onSuccess(response -> {
                     log.info("request response:{}", response.bodyAsString());

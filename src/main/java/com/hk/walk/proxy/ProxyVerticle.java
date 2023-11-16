@@ -4,14 +4,20 @@ import com.google.gson.Gson;
 import com.hk.walk.config.Frontend;
 import com.hk.walk.config.Upstream;
 import com.hk.walk.config.WalkConfig;
+import com.hk.walk.constant.WalkConstants;
 import com.hk.walk.wrapper.HttpClientWrapper;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.FileSystemAccess;
+import io.vertx.ext.web.handler.StaticHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+
+import java.util.List;
+import java.util.Objects;
 
 /**
  * @author : HK意境
@@ -111,8 +117,13 @@ public class ProxyVerticle extends AbstractVerticle {
                 }
             }
 
-            // TODO 解决/static 静态资源问题
-
+            // 解决/static/*请求
+            if (requestPath.startsWith(WalkConstants.STATIC_RESOURCE_PATH)) {
+                if (Objects.nonNull(this.walkConfig.getRoot())) {
+                    this.router.handle(request);
+                    return;
+                }
+            }
 
             // 暂停流的读取
             request.pause();
@@ -140,7 +151,6 @@ public class ProxyVerticle extends AbstractVerticle {
             }
 
             // 没有找到匹配的upstream
-            // 没有找到匹配的
             response.setStatusCode(404).setStatusMessage("no page 404");
             response.end("not found page 404");
         });
@@ -193,13 +203,13 @@ public class ProxyVerticle extends AbstractVerticle {
 
                 }).onFailure(error -> {
                     // 请求异常
-                    error.printStackTrace();
+                    log.info("proxy client request failure:", error);
                     response.setStatusCode(500)
                             .setStatusMessage(error.getMessage());
                 });
 
             } else {
-                result.cause().printStackTrace();
+                log.info("proxy client request failure:", result.cause());
                 response.setStatusCode(500)
                         .setStatusMessage(result.cause().getMessage());
             }

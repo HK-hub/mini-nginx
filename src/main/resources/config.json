@@ -26,6 +26,10 @@
             "unit": "KB"
         }
     },
+
+    // 资源根目录
+    "root": "D:/中冶赛迪/混匀物料/部署程序/前端/混匀/dist",
+
     // 前端静态资源
     "frontends": [
         {
@@ -48,12 +52,8 @@
             "dir": "F:/JavaCode/mini-nginx/src/main/resources/template/web2"
         },
         {
-            "path": "/profile",
-            "dir": ""
-        },
-        {
-            "path": "/video",
-            "dir": ""
+            "path": "/web",
+            "dir": "D:/中冶赛迪/混匀物料/部署程序/前端/混匀/dist"
         }
     ],
     // 代理的上游

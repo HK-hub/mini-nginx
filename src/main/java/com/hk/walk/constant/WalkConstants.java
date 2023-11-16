@@ -27,4 +27,9 @@ public class WalkConstants {
      */
     public static final String DEFAULT_LOG_SIZE_UNIT = "KB";
 
+    /**
+     * 静态资源路径
+     */
+    public static final String STATIC_RESOURCE_PATH = "/static";
+
 }

@@ -59,11 +59,11 @@ public class ServerVerticle extends AbstractVerticle {
             request.toWebSocket().onSuccess(webSocket -> {
                 log.info("8080 websocket connect success");
                 webSocket.writeTextMessage("hello");
-                /*webSocket.writeFrame(WebSocketFrame.textFrame("this is a ping message", true));
+
                 webSocket.frameHandler(frame -> {
                     log.info("8080 receive message:{}", frame.textData());
-                    webSocket.writeFrame(WebSocketFrame.textFrame(frame.textData() + ":" + System.currentTimeMillis(), true));
-                });*/
+                    webSocket.writeTextMessage(frame.textData() + ":" + System.currentTimeMillis());
+                });
             });
         });
 

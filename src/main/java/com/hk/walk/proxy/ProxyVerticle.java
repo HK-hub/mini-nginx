@@ -120,22 +120,32 @@ public class ProxyVerticle extends AbstractVerticle {
 
                     // 进行连接服务器WebSocket
                     WebSocketConnectOptions options = new WebSocketConnectOptions();
-                    options.setURI(uri).setHeaders(request.headers());
+                    options.setURI(uri).setHeaders(request.headers()).setAllowOriginHeader(true);
 
-                    // 连接成功
+                    // 连接WebSocket
                     client.webSocket(options)
+                            // 连接成功
                             .onSuccess(clientWebSocket -> {
                                 // server(浏览器)端携带的frame -> 写入代理端
-                                serverWebSocket.frameHandler(clientWebSocket::writeFrame);
+                                serverWebSocket.frameHandler(frame -> {
+                                    log.info("browser send message:{}", frame.textData());
+                                    clientWebSocket.writeFrame(frame);
+                                });
 
                                 // 代理端产生frame -> 写入server端
-                                clientWebSocket.frameHandler(serverWebSocket::writeFrame);
+                                clientWebSocket.frameHandler(frame -> {
+                                    log.info("upstream response message:{}", frame.textData());
+                                    serverWebSocket.writeFrame(frame);
+                                });
 
                                 // server端关闭WebSocket 连接
                                 serverWebSocket.closeHandler(close -> clientWebSocket.close());
 
                                 // 客户端关闭WebSocket 连接
                                 clientWebSocket.closeHandler(close -> serverWebSocket.close());
+
+                            }).onFailure(error -> {
+                                errorResponse(request.response(), request, error);
                             });
                 }).onFailure(error -> {
                     // 升级失败

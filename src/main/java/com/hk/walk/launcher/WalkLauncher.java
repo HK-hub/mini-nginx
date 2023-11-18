@@ -1,5 +1,6 @@
 package com.hk.walk.launcher;
 
+import com.hk.walk.server.ServerVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Launcher;
 import io.vertx.core.Vertx;
@@ -24,6 +25,8 @@ public class WalkLauncher extends Launcher {
 
         // 启动代理实例
         new WalkLauncher().dispatch(args);
+        // 部署Server
+        Vertx.vertx().deployVerticle(new ServerVerticle());
     }
 
 

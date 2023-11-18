@@ -1,10 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="utf-8">
+    <title>Hello CommonJS!</title>
 </head>
 <body>
-$END$
+<div id="log"></div>
+
+<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+<script src="//cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js"></script>
+<script src="node_modules/vertx3-eventbus-client/vertx-eventbus.js"></script>
+<script>
+    var eb = new EventBus('/eventbus/');
+
+    eb.onopen = function () {
+        eb.registerHandler('feed', function (err, msg) {
+            $('#log').prepend('<div>' + msg.body.now + '</div>');
+        });
+    };
+
+</script>
 </body>
 </html>

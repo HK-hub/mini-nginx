@@ -1,16 +1,25 @@
-package com.hk.walk.proxy;
+package com.hk.walk.server;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.http.*;
+import io.vertx.core.http.impl.WebSocketImplBase;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.bridge.PermittedOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
+import io.vertx.ext.web.handler.sockjs.SockJSBridgeOptions;
+import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import javax.security.auth.login.AccountException;
+import java.text.DateFormat;
+import java.time.Instant;
+import java.util.Date;
 
 /**
  * @author : HK意境
@@ -44,10 +53,46 @@ public class ServerVerticle extends AbstractVerticle {
         this.router = Router.router(vertx);
 
 
-        // 静态资源
-        this.router.get("/index.html").handler(StaticHandler.create("")
-                .setCachingEnabled(true).setMaxAgeSeconds(65535));
+        // webSocket 支持
+        router.route("/websocket").handler(context -> {
+            HttpServerRequest request = context.request();
+            request.toWebSocket().onSuccess(webSocket -> {
+                log.info("8080 websocket connect success");
+                webSocket.writeTextMessage("hello");
+                /*webSocket.writeFrame(WebSocketFrame.textFrame("this is a ping message", true));
+                webSocket.frameHandler(frame -> {
+                    log.info("8080 receive message:{}", frame.textData());
+                    webSocket.writeFrame(WebSocketFrame.textFrame(frame.textData() + ":" + System.currentTimeMillis(), true));
+                });*/
+            });
+        });
 
+
+        SockJSBridgeOptions opts = new SockJSBridgeOptions()
+                .addOutboundPermitted(new PermittedOptions().setAddress("feed"));
+
+        SockJSHandler ebHandler = SockJSHandler.create(vertx);
+        router.mountSubRouter("/eventbus", ebHandler.bridge(opts));
+
+
+        // Create a router endpoint for the static content.
+        router.route().handler(StaticHandler.create());
+
+
+        EventBus eb = vertx.eventBus();
+        vertx.setPeriodic(1000, t -> {
+            // Create a timestamp string
+            String timestamp = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
+                    .format(Date.from(Instant.now()));
+
+            eb.publish("feed", new JsonObject().put("now", timestamp));
+        });
+
+
+
+        // 静态资源
+        /*this.router.get("/index.html").handler(StaticHandler.create("")
+                .setCachingEnabled(true).setMaxAgeSeconds(65535));*/
 
 
         // 设置路由和处理器

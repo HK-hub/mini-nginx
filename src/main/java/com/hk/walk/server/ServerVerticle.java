@@ -58,6 +58,14 @@ public class ServerVerticle extends AbstractVerticle {
             HttpServerRequest request = context.request();
             request.toWebSocket().onSuccess(webSocket -> {
                 log.info("8080 websocket connect success");
+                /**
+                 * it seems that gravity cannot work with compression in websockets,
+                 * the Sec-WebSocket-Extensions: permessage-deflate header causes an error (RSV != 0 and no extension negotiated, RSV:4),
+                 * if you put nginx before gravity and cut the Sec-WebSocket-Extensions: permessage-deflate header,
+                 * then error (RSV != 0 and no extension negotiated, RSV:4) disappears
+                 *
+                 * https://github.com/netty/netty/issues/2953
+                 */
                 webSocket.writeTextMessage("hello");
 
                 webSocket.frameHandler(frame -> {

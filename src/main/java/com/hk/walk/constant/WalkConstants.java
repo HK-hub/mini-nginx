@@ -43,4 +43,9 @@ public class WalkConstants {
      */
     public static final String WEBSOCKET_UPGRADE_PROTOCOL = "websocket";
 
+    /**
+     * WebSocket 扩展
+     */
+    public static final String HEADER_EXTENSIONS = "Sec-WebSocket-Extensions";
+
 }

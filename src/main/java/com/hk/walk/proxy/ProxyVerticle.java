@@ -11,6 +11,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.ProxyOptions;
 import io.vertx.ext.web.Router;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.BooleanUtils;
@@ -111,6 +112,9 @@ public class ProxyVerticle extends AbstractVerticle {
             // 非websocket 请求
             return false;
         }
+
+        // 解决WebSocket 扩展压缩的问题
+        String header = request.getHeader(WalkConstants.HEADER_EXTENSIONS);
 
         // 升级成为WebSocket 协议
         request.toWebSocket()

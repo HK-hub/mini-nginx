@@ -95,7 +95,12 @@ public class Upstream {
             // 创建客户端
             HttpClientOptions options = new HttpClientOptions();
             options.setDefaultHost(host).setDefaultPort(port)
-                    .setKeepAlive(true);
+                    .setKeepAlive(true)
+                    // 设置WebSocket压缩策略：如果不设置则无法进行正常的frame收发流程：
+                    // 参考资料：https://golang.0voice.com/?id=1105,
+                    // request.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate")
+                    // http://timd.cn/parsing-ws-permessage-extension-using-rust/
+                    .setTryUsePerMessageWebSocketCompression(true);
             HttpClient client = vertx.createHttpClient(options);
 
             log.info("create http client:host={},port={}", host, port);

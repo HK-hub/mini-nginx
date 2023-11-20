@@ -1,5 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="WalkLauncher" type="Application" factoryName="Application" nameIsGenerated="true">
+    <option name="ALTERNATIVE_JRE_PATH" value="17" />
     <option name="MAIN_CLASS_NAME" value="com.hk.walk.launcher.WalkLauncher" />
     <module name="mini-nginx" />
     <option name="PROGRAM_PARAMETERS" value="run com.hk.walk.proxy.ProxyVerticle -conf src/main/resources/config.json" />

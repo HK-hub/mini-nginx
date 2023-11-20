@@ -28,7 +28,7 @@ Content-Type: application/json
 
 
 ### 9090/a
-GET http://localhost:9090/a/hello
+GET http://localhost:9090/api/hello
 
 ### 9090/b
 GET http://localhost:9090/b/hello

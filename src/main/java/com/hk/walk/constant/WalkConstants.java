@@ -48,4 +48,9 @@ public class WalkConstants {
      */
     public static final String HEADER_EXTENSIONS = "Sec-WebSocket-Extensions";
 
+    /**
+     * 默认服务端权重
+     */
+    public static final int DEFAULT_SERVER_WEIGHT = 1;
+
 }

@@ -11,10 +11,12 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.ProxyOptions;
 import io.vertx.ext.web.Router;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.BooleanUtils;
+
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -36,10 +38,6 @@ public class ProxyVerticle extends AbstractVerticle {
 
     private WalkConfig walkConfig;
 
-    /**
-     * 代理服务器地址
-     */
-    private String proxyHost = "127.0.0.1";
 
     /**
      * 客户端端口
@@ -209,10 +207,11 @@ public class ProxyVerticle extends AbstractVerticle {
      * @return
      */
     private boolean proxyUpstream(HttpServerRequest request, String requestPath, HttpServerResponse response) {
+
         for (Upstream upstream : this.walkConfig.getUpstreams()) {
             // 获取匹配路径的upstream
             // TODO 后续支持正则表达式
-            String prefix = upstream.getPath();
+            String prefix = upstream.getLocation();
             if (requestPath.startsWith(prefix)) {
                 // 请求路径以配置路径开头
                 // 负载均衡选择
@@ -221,6 +220,10 @@ public class ProxyVerticle extends AbstractVerticle {
                 String serverUri = upstream.getServerUriList().get(clientWrapper.getIndex());
                 String uri = request.uri().replace(prefix, serverUri);
 
+                // 添加header
+                for (Map.Entry<String, List<String>> headerEntry : upstream.getHeaders().entrySet()) {
+                    request.headers().add(headerEntry.getKey(), headerEntry.getValue());
+                }
                 // 处理WebSocket 请求
                 boolean webSocketHandle = this.webSocketHandle(clientWrapper.getHttpClient(), request, uri, response);
                 if (BooleanUtils.isTrue(webSocketHandle)) {
@@ -245,8 +248,15 @@ public class ProxyVerticle extends AbstractVerticle {
      * @return
      */
     private boolean proxyFronted(HttpServerRequest request, String requestPath) {
+
+        // 匹配指定前缀前端路由
         for (Frontend frontend : this.walkConfig.getFrontends()) {
-            if (requestPath.startsWith(frontend.getPath())) {
+            if (requestPath.startsWith(frontend.getLocation())) {
+                // 填入自定义header
+                Map<String, List<String>> headers = frontend.getHeaders();
+                for (Map.Entry<String, List<String>> headerEntry : headers.entrySet()) {
+                    request.headers().add(headerEntry.getKey(), headerEntry.getValue());
+                }
                 this.router.handle(request);
                 return true;
             }

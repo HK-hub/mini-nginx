@@ -1,19 +1,18 @@
 package com.hk.walk.config;
 
+import com.hk.walk.config.point.Backend;
 import com.hk.walk.loadbalance.LoadBalancer;
 import com.hk.walk.loadbalance.LoadBalancerFactory;
 import com.hk.walk.wrapper.HttpClientWrapper;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
-import io.vertx.ext.web.client.WebClient;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author : HK意境
@@ -33,7 +32,7 @@ public class Upstream {
     /**
      * 匹配路径
      */
-    private String path;
+    private String location;
 
 
     /**
@@ -45,7 +44,7 @@ public class Upstream {
     /**
      * 代理服务器地址
      */
-    private List<String> servers;
+    private List<Backend> servers;
 
 
     /**
@@ -58,6 +57,13 @@ public class Upstream {
      * 负载均衡策略
      */
     private String loadBalance;
+
+
+    /**
+     * 自定义请求头
+     * TODO 后续支持表达式方法，OGNL表达式
+     */
+    private Map<String, List<String>> headers = new LinkedHashMap<>();
 
 
     /**
@@ -83,8 +89,8 @@ public class Upstream {
         }
 
         // 创建客户端
-        for (String server : servers) {
-            URL url = new URI(server).toURL();
+        for (Backend server : servers) {
+            URL url = new URI(server.getServer()).toURL();
             // 获取端口和地址
             String host = url.getHost();
             int port = url.getPort();
@@ -93,23 +99,30 @@ public class Upstream {
             this.serverUriList.add(url.toURI().getPath());
 
             // 创建客户端
-            HttpClientOptions options = new HttpClientOptions();
-            options.setDefaultHost(host).setDefaultPort(port)
-                    .setKeepAlive(true)
-                    // 设置WebSocket压缩策略：如果不设置则无法进行正常的frame收发流程：
-                    // 参考资料：https://golang.0voice.com/?id=1105,
-                    // request.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate")
-                    // http://timd.cn/parsing-ws-permessage-extension-using-rust/
-                    .setTryUsePerMessageWebSocketCompression(true);
-            HttpClient client = vertx.createHttpClient(options);
+            // 根据权重放入对应数量客户端
+            for (Integer i = 0; i < server.getWeight(); i++) {
+                HttpClientOptions options = new HttpClientOptions();
+                options.setDefaultHost(host).setDefaultPort(port)
+                        .setKeepAlive(true)
+                        // 设置WebSocket压缩策略：如果不设置则无法进行正常的frame收发流程：
+                        // 参考资料：https://golang.0voice.com/?id=1105,
+                        // request.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate")
+                        // http://timd.cn/parsing-ws-permessage-extension-using-rust/
+                        .setTryUsePerMessageWebSocketCompression(true);
+                HttpClient client = vertx.createHttpClient(options);
 
-            log.info("create http client:host={},port={}", host, port);
-            this.httpClientList.add(client);
+                log.info("create http client:host={},port={},index={},weight={}", host, port, i, server.getWeight());
+                this.httpClientList.add(client);
+            }
+
+            // 扰乱客户端顺序
+            Collections.shuffle(this.httpClientList);
         }
 
         // 负载均衡处理
         this.loadBalancer = LoadBalancerFactory.getLoadBalancer(this.loadBalance);
     }
+
 
 
     /**

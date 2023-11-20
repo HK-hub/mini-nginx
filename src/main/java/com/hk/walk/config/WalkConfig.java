@@ -150,7 +150,7 @@ public class WalkConfig {
             }
 
             // 设置路由
-            router.route(frontend.getPath())
+            router.route(frontend.getLocation())
                     .handler(routerContext -> {
                         // 禁用缓存
                         if (Objects.nonNull(cache) && BooleanUtils.isFalse(cache.getEnable())) {
@@ -174,7 +174,7 @@ public class WalkConfig {
         router.errorHandler(404, context -> {
             String path = context.request().path();
             for (Frontend frontend : this.frontends) {
-                if (path.startsWith(frontend.getPath()) && StringUtils.isNotBlank(frontend.getRewrite())) {
+                if (path.startsWith(frontend.getLocation()) && StringUtils.isNotBlank(frontend.getRewrite())) {
                     // 重新路由
                     context.reroute(frontend.getRewrite());
                     return;

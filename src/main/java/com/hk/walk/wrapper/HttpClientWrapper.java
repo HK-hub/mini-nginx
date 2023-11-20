@@ -4,6 +4,7 @@ import io.vertx.core.http.HttpClient;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 /**
  * @author : HK意境
@@ -17,6 +18,7 @@ import lombok.Setter;
  */
 @Setter
 @Getter
+@Accessors(chain = true)
 @NoArgsConstructor
 public class HttpClientWrapper {
 
@@ -26,6 +28,8 @@ public class HttpClientWrapper {
     private int index;
 
     private HttpClient httpClient;
+
+    private Integer weight;
 
     /**
      * client 请求目标uri

@@ -1,7 +1,8 @@
 {
     // 监听端口
     "port": 9090,
-    //
+    // worker 数量：处理请求的线程数量, 推荐为cpu核心数量 + 1
+    "worker": 4,
     // 日志记录
     "logs": {
         // 访问日志
@@ -65,16 +66,24 @@
     // 代理的上游
     "upstreams": [
         {
+            "location": "/sec",
+            "servers": [
+                {
+                    "server": "https://www.baidu.com"
+                }
+            ]
+        },
+        {
             // 代理的前缀
             "location": "/chat",
+            // 进行webSocket代理
+            "websocket": true,
             // 代理的服务地址, 可以进行负载均衡
             "servers": [
                 {
                     "server": "http://localhost:8080/websocket"
                 }
             ],
-            // 进行webSocket代理
-            "websocket": true,
             // 自定义请求头
             "headers": {
                 "Test_Header1": ["test_header_value_1_1", "test_header_value_1_2"],
@@ -138,7 +147,7 @@
             // 代理的服务地址, 可以进行负载均衡
             "servers": [
                 {
-                    "server": "http://localhost:8080"
+                    "server": "http://www.baidu.com"
                 }
             ]
         }

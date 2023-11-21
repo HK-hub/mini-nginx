@@ -8,8 +8,11 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.builder.EqualsExclude;
+
 import java.net.URI;
 import java.net.URL;
 import java.util.*;
@@ -38,6 +41,7 @@ public class Upstream {
     /**
      * 代理到的目标地址uri
      */
+    @EqualsAndHashCode.Exclude
     private List<String> serverUriList;
 
 
@@ -50,6 +54,7 @@ public class Upstream {
     /**
      * 客户端地址列表
      */
+    @EqualsAndHashCode.Exclude
     private List<HttpClient> httpClientList;
 
 
@@ -69,6 +74,7 @@ public class Upstream {
     /**
      * 负载均衡器
      */
+    @EqualsAndHashCode.Exclude
     private LoadBalancer loadBalancer;
 
     /**
@@ -109,6 +115,14 @@ public class Upstream {
                         // request.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate")
                         // http://timd.cn/parsing-ws-permessage-extension-using-rust/
                         .setTryUsePerMessageWebSocketCompression(true);
+
+                // https 代理设置
+                if (url.getProtocol().equalsIgnoreCase(WalkConfig.PROTOCOL_HTTPS)) {
+                    options.setSsl(true)
+                            .setTrustAll(true)
+                            .setDefaultPort(443);
+                }
+
                 HttpClient client = vertx.createHttpClient(options);
 
                 log.info("create http client:host={},port={},index={},weight={}", host, port, i, server.getWeight());

@@ -27,6 +27,7 @@ public class WalkLauncher extends Launcher {
         new WalkLauncher().dispatch(args);
         // 部署Server
         Vertx.vertx().deployVerticle(new ServerVerticle());
+
     }
 
 

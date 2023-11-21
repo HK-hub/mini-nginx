@@ -1,9 +1,11 @@
 package com.hk.walk;
 
-import com.hk.walk.proxy.ProxyVerticle;
+import com.hk.walk.context.WalkContext;
+import com.hk.walk.server.ServerVerticle;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author : HK意境
@@ -15,12 +17,38 @@ import io.vertx.core.Vertx;
  * @Modified :
  * @Version : 1.0
  */
+@Slf4j
 public class MainVerticle extends AbstractVerticle {
 
+    /**
+     * 上下文
+     */
+    public WalkContext walkContext = WalkContext.getInstance();
+
+    /**
+     * 启动参数
+     */
+    private static String[] arguments = null;
+
+
     public static void main(String[] args) {
+
+        arguments = args;
+        // 获取配置文件位置
         Vertx.vertx().deployVerticle(new MainVerticle());
-        Vertx.vertx().deployVerticle(new ProxyVerticle());
+        Vertx.vertx().deployVerticle(new ServerVerticle());
     }
+
+
+    /**
+     * 处理命令请求
+     */
+    public void handler() {
+
+
+    }
+
+
 
     /**
      * 启动
@@ -29,6 +57,11 @@ public class MainVerticle extends AbstractVerticle {
      */
     @Override
     public void start(Promise<Void> startPromise) throws Exception {
-        super.start(startPromise);
+
+        this.walkContext.readConfig(arguments);
     }
+
+
+
+
 }

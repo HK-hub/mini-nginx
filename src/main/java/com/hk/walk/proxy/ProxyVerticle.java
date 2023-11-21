@@ -1,10 +1,10 @@
 package com.hk.walk.proxy;
 
-import com.google.gson.Gson;
 import com.hk.walk.config.Frontend;
 import com.hk.walk.config.Upstream;
 import com.hk.walk.config.WalkConfig;
 import com.hk.walk.constant.WalkConstants;
+import com.hk.walk.context.WalkContext;
 import com.hk.walk.wrapper.HttpClientWrapper;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
@@ -32,9 +32,27 @@ import java.util.Objects;
 @Slf4j
 public class ProxyVerticle extends AbstractVerticle {
 
+    /**
+     * 上下文环境
+     */
+    private WalkContext walkContext = WalkContext.getInstance();
+
+    /**
+     * 服务器
+     */
     private HttpServer server;
 
+
+    /**
+     * 路由器
+     */
     private Router router;
+
+
+    /**
+     * 部署Verticle ID
+     */
+    private String deploymentId = null;
 
     private WalkConfig walkConfig;
 
@@ -55,8 +73,9 @@ public class ProxyVerticle extends AbstractVerticle {
         log.info("deploy proxyVerticle use config:{}", jsonConfig);
 
         // 解析成为对象
-        this.walkConfig = new Gson().fromJson(jsonConfig.toString(), WalkConfig.class);
+        this.walkConfig = WalkConstants.gson.fromJson(jsonConfig.toString(), WalkConfig.class);
         // 设置配置客户端
+        this.router.clear();
         this.walkConfig.init(this.vertx, this.router);
 
         log.info("parse config.json to object:{}", this.walkConfig);
@@ -86,12 +105,27 @@ public class ProxyVerticle extends AbstractVerticle {
         this.server.listen(this.port, event -> {
             if (event.succeeded()) {
                 log.info("mini nginx proxy start success on port:{}", this.port);
+                // 添加进入上下文
+                this.walkContext.addProxyVerticle(this.port, this);
             }
             // 启动失败
             if (event.failed()) {
                 log.info("mini nginx proxy start fail on port:{}, cause:", this.port, event.cause());
             }
         });
+        this.deploymentId = this.deploymentID();
+    }
+
+
+    /**
+     * 热重载
+     * @param walkConfig
+     * @return
+     */
+    public boolean reload(WalkConfig walkConfig) {
+
+
+        return false;
     }
 
 
@@ -336,4 +370,17 @@ public class ProxyVerticle extends AbstractVerticle {
     }
 
 
+    /**
+     * 停机
+     * @throws Exception
+     */
+    @Override
+    public void stop() throws Exception {
+
+        // 停机日志
+        log.info("proxy verticle:{} on {}, is stopping...", this.deploymentId, this.port);
+        this.router.clear();
+        this.walkConfig = null;
+        this.server.close();
+    }
 }

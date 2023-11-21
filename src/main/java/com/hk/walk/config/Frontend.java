@@ -1,6 +1,7 @@
 package com.hk.walk.config;
 
 import com.hk.walk.config.cache.Cache;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,8 +19,7 @@ import java.util.Map;
  * @Modified :
  * @Version : 1.0
  */
-@Getter
-@Setter
+@Data
 public class Frontend {
 
     /**

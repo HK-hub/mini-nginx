@@ -1,5 +1,7 @@
 package com.hk.walk.constant;
 
+import com.google.gson.Gson;
+
 /**
  * @author : HK意境
  * @ClassName : WalkConstants
@@ -11,6 +13,26 @@ package com.hk.walk.constant;
  * @Version : 1.0
  */
 public class WalkConstants {
+
+
+    public static final Gson gson = new Gson();
+
+
+    /**
+     * 配置文件位置参数项目
+     */
+    public static final String CONFIG_PATH_ARGUMENT = "-walkConfig";
+
+    /**
+     * 默认配置文件所在文件夹名称
+     */
+    public static final String DEFAULT_CONFIG_DIRECTORY = "walkConfig";
+
+    /**
+     * 配置应用启动端口参数项目
+     */
+    public static final String CONFIG_PORT_ARGUMENT = "-walkPort";
+
 
     /**
      * 默认监听端口

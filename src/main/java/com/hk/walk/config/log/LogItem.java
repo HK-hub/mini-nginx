@@ -1,6 +1,7 @@
 package com.hk.walk.config.log;
 
 import com.hk.walk.constant.WalkConstants;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,8 +15,7 @@ import lombok.Setter;
  * @Modified :
  * @Version : 1.0
  */
-@Getter
-@Setter
+@Data
 public class LogItem {
 
     /**

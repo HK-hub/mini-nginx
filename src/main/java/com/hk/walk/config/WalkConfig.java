@@ -6,6 +6,7 @@ import com.hk.walk.config.error.ErrorItem;
 import com.hk.walk.constant.WalkConstants;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.FileSystemAccess;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -31,10 +32,23 @@ import java.util.Objects;
 @Data
 public class WalkConfig {
 
+
+    /**
+     * http协议
+     */
+    public static final String PROTOCOL_HTTPS = "https";
+
+
     /**
      * 端口
      */
     private Integer port;
+
+    /**
+     * 处理请求的线程数量:推荐为cpu核心数量 + 1
+     */
+    private Integer worker;
+
 
     /**
      * 日志
@@ -92,6 +106,11 @@ public class WalkConfig {
         // 设置端口
         if (Objects.isNull(this.port)) {
             this.setPort(WalkConstants.defaultPort);
+        }
+
+        // 设置请求数量
+        if (Objects.isNull(this.worker)) {
+            this.worker = Runtime.getRuntime().availableProcessors() + 1;
         }
 
         // 初始化服务器上游
@@ -186,6 +205,17 @@ public class WalkConfig {
             context.response().setStatusCode(404).end("not found");
         });
 
+    }
+
+
+    /**
+     * 转换为JSONObject
+     * @param walkConfig
+     * @return
+     */
+    public static JsonObject toJsonObject(WalkConfig walkConfig) {
+
+        return JsonObject.mapFrom(walkConfig);
     }
 
 }

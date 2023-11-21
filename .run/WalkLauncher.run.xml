@@ -3,7 +3,7 @@
     <option name="ALTERNATIVE_JRE_PATH" value="17" />
     <option name="MAIN_CLASS_NAME" value="com.hk.walk.launcher.WalkLauncher" />
     <module name="mini-nginx" />
-    <option name="PROGRAM_PARAMETERS" value="run com.hk.walk.proxy.ProxyVerticle -conf src/main/resources/config.json" />
+    <option name="PROGRAM_PARAMETERS" value="run com.hk.walk.proxy.ProxyVerticle -conf src/main/resources/config.json -walkConf src/main/resources/config" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="com.hk.walk.launcher.*" />

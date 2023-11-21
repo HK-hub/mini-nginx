@@ -1,5 +1,6 @@
 package com.hk.walk.config.cache;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,8 +14,7 @@ import lombok.Setter;
  * @Modified :
  * @Version : 1.0
  */
-@Setter
-@Getter
+@Data
 public class Cache {
 
     /**

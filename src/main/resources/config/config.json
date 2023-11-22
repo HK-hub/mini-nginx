@@ -66,7 +66,16 @@
     // 代理的上游
     "upstreams": [
         {
-            "location": "/sec",
+            "location": "/zhihu",
+            "protocol": "http1.1",
+            "servers": [
+                {
+                    "server": "https://www.zhihu.com"
+                }
+            ]
+        },
+        {
+            "location": "/baidu",
             "servers": [
                 {
                     "server": "https://www.baidu.com"
@@ -143,7 +152,7 @@
         // TODO / 根地址应该最后匹配才对，后续需要加入最佳的路径匹配策略
         {
             // 代理的前缀
-            "location": "/",
+            "location": "/nosec",
             // 代理的服务地址, 可以进行负载均衡
             "servers": [
                 {

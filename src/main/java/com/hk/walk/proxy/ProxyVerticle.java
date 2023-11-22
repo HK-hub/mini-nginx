@@ -310,8 +310,8 @@ public class ProxyVerticle extends AbstractVerticle {
     /**
      * 代理发送请求
      *
-     * @param client
-     * @param request
+     * @param client 代理客户端
+     * @param request 浏览器进行来的请求
      * @param uri      请求uri, 如果有请求参数会进行携带
      * @param response
      */

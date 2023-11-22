@@ -1,12 +1,18 @@
 package com.hk.walk.config;
 
 import com.hk.walk.config.point.Backend;
+import com.hk.walk.enumerate.HttpProtocolEnum;
 import com.hk.walk.loadbalance.LoadBalancer;
 import com.hk.walk.loadbalance.LoadBalancerFactory;
 import com.hk.walk.wrapper.HttpClientWrapper;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpVersion;
+import io.vertx.core.net.JksOptions;
+import io.vertx.core.net.OpenSSLEngineOptions;
+import io.vertx.core.net.SSLEngineOptions;
+import io.vertx.core.net.TrustOptions;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +43,10 @@ public class Upstream {
      */
     private String location;
 
+    /**
+     * see also {@link HttpVersion}
+     */
+    private String protocol = HttpVersion.HTTP_1_1.alpnName();
 
     /**
      * 代理到的目标地址uri
@@ -100,6 +110,9 @@ public class Upstream {
             // 获取端口和地址
             String host = url.getHost();
             int port = url.getPort();
+            if (port == -1) {
+                port = url.getDefaultPort();
+            }
 
             // 目标URI
             this.serverUriList.add(url.toURI().getPath());
@@ -107,24 +120,11 @@ public class Upstream {
             // 创建客户端
             // 根据权重放入对应数量客户端
             for (Integer i = 0; i < server.getWeight(); i++) {
-                HttpClientOptions options = new HttpClientOptions();
-                options.setDefaultHost(host).setDefaultPort(port)
-                        .setKeepAlive(true)
-                        // 设置WebSocket压缩策略：如果不设置则无法进行正常的frame收发流程：
-                        // 参考资料：https://golang.0voice.com/?id=1105,
-                        // request.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate")
-                        // http://timd.cn/parsing-ws-permessage-extension-using-rust/
-                        .setTryUsePerMessageWebSocketCompression(true);
 
-                // https 代理设置
-                if (url.getProtocol().equalsIgnoreCase(WalkConfig.PROTOCOL_HTTPS)) {
-                    options.setSsl(true)
-                            .setTrustAll(true)
-                            .setDefaultPort(443);
-                }
-
+                // 构建options
+                HttpClientOptions options = buildHttpClientOptions(server, host, port, url);
+                // 创建客户端
                 HttpClient client = vertx.createHttpClient(options);
-
                 log.info("create http client:host={},port={},index={},weight={}", host, port, i, server.getWeight());
                 this.httpClientList.add(client);
             }
@@ -137,6 +137,45 @@ public class Upstream {
         this.loadBalancer = LoadBalancerFactory.getLoadBalancer(this.loadBalance);
     }
 
+
+    /**
+     * 构建HttpClientOptions
+     * @param server
+     * @param host
+     * @param port
+     * @param url
+     * @return
+     */
+    private HttpClientOptions buildHttpClientOptions(Backend server, String host, int port, URL url) {
+
+        HttpClientOptions options = new HttpClientOptions();
+        options.setDefaultHost(host)
+                .setDefaultPort(port)
+                .setKeepAlive(true)
+                // 设置WebSocket压缩策略：如果不设置则无法进行正常的frame收发流程：参考资料：https://golang.0voice.com/?id=1105,
+                // request.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate"), http://timd.cn/parsing-ws-permessage-extension-using-rust/
+                .setTryUsePerMessageWebSocketCompression(true);
+
+        // HTTP 版本设置
+        HttpVersion httpVersion = HttpProtocolEnum.getHttpVersion(protocol);
+        if (Objects.equals(httpVersion, HttpVersion.HTTP_2)) {
+            // http2 版本
+            options.setUseAlpn(true);
+        }
+        options.setProtocolVersion(httpVersion);
+
+        // HTTPS 代理设置
+        if (url.getProtocol().equalsIgnoreCase(WalkConfig.PROTOCOL_HTTPS)) {
+            options.setSsl(true);
+            options.setTrustAll(true);
+            // 此处port 已经是443了
+            options.setDefaultPort(port);
+            //  options.setVerifyHost(false);
+            // 使用 OpenSSL 引擎
+            // options.setOpenSslEngineOptions(new OpenSSLEngineOptions());
+        }
+        return options;
+    }
 
 
     /**
